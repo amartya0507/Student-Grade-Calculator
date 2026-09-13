@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Grade Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     TOKENS (DEFAULT: DARK MODE)
+     ============================================================ */
+  :root, [data-theme="dark"] {
+    --ink: #F7F6F2;
+    --ink-soft: #A7ADBE;
+    --paper: #131722;
+    --card: #1C2333;
+    --hairline: #2A3347;
+    --hairline-strong: #3A4560;
+    --brass: #D4A33B;
+    --brass-soft: rgba(212, 163, 59, 0.15);
+    --sage: #4E8765;
+    --sage-soft: rgba(78, 135, 101, 0.15);
+    --rust: #C54E4E;
+    --rust-soft: rgba(197, 78, 78, 0.15);
+    --radius-card: 14px;
+    --radius-control: 8px;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.3);
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  /* LIGHT MODE OVERRIDES */
+  [data-theme="light"] {
+    --ink: #1C2333;
+    --ink-soft: #4A5164;
+    --paper: #F7F6F2;
+    --card: #FFFFFF;
+    --hairline: #E3E1D8;
+    --hairline-strong: #CFCCBF;
+    --brass: #A8791C;
+    --brass-soft: #F1E6CC;
+    --sage: #3F6C51;
+    --sage-soft: #E6EEE8;
+    --rust: #A23B3B;
+    --rust-soft: #F5E7E4;
+    --shadow-card: 0 1px 2px rgba(28, 35, 51, 0.04), 0 8px 24px rgba(28, 35, 51, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-font-smoothing: antialiased; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    font-variant-numeric: tabular-nums lining-nums;
+    line-height: 1.5;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brass);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  /* ============================================================
+     LAYOUT SHELL
+     ============================================================ */
+  .app-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 64px;
+  }
+
+  /* ---- Header ---- */
+  .app-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 40px 0 28px;
+    border-bottom: 1px solid var(--hairline-strong);
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+
+  .app-header__title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .app-header__mark {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--brass);
+  }
+
+  .app-header__title {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(28px, 4vw, 38px);
+    line-height: 1.1;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .app-header__subtitle {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .scale-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 180px;
+  }
+
+  .scale-selector label, .theme-toggle-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .scale-selector select {
+    appearance: none;
+    -webkit-appearance: none;
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--radius-control);
+    padding: 10px 38px 10px 14px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%23A7ADBE' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+
+  .scale-selector select:hover { border-color: var(--brass); }
+
+  .theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    background: var(--card);
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--radius-control);
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .theme-toggle-btn:hover { border-color: var(--brass); }
+
+  /* ---- Custom scale panel ---- */
+  .custom-scale-panel {
+    display: none;
+    background: var(--brass-soft);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-card);
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+
+  .custom-scale-panel.is-visible { display: block; }
+
+  .custom-scale-panel__heading {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .custom-scale-panel__hint {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+  }
+
+  .custom-scale-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .custom-scale-pair {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card);
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--radius-control);
+    padding: 6px 8px;
+  }
+
+  .custom-scale-pair input {
+    border: none;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    width: 56px;
+    text-align: center;
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .custom-scale-pair input:first-child { width: 44px; font-weight: 600; }
+  .custom-scale-pair input:focus { outline: none; }
+  .custom-scale-pair span { color: var(--hairline-strong); }
+
+  .btn-add-grade {
+    background: none;
+    border: 1px dashed var(--hairline-strong);
+    border-radius: var(--radius-control);
+    padding: 6px 14px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+
+  .btn-add-grade:hover { border-color: var(--brass); color: var(--brass); }
+
+  /* ---- Main dashboard grid ---- */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 28px;
+    align-items: start;
+  }
+
+  @media (max-width: 880px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+    .summary-panel { order: -1; position: static; }
+  }
+
+  /* ============================================================
+     COURSE LEDGER (left panel)
+     ============================================================ */
+  .ledger-panel {
+    background: var(--card);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--hairline);
+    overflow: hidden;
+  }
+
+  .ledger-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--hairline-strong);
+  }
+
+  .ledger-panel__title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .ledger-panel__count {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .ledger-columns {
+    display: grid;
+    grid-template-columns: 1fr 96px 140px 40px;
+    gap: 12px;
+    padding: 14px 24px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 640px) {
+    .ledger-columns { display: none; }
+  }
+
+  #course-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .course-row {
+    display: grid;
+    grid-template-columns: 1fr 96px 140px 40px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 24px;
+    border-top: 1px solid var(--hairline);
+    animation: row-in 0.22s ease;
+  }
+
+  @keyframes row-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .course-row.is-removing {
+    animation: row-out 0.18s ease forwards;
+  }
+
+  @keyframes row-out {
+    to { opacity: 0; transform: translateX(8px); max-height: 0; padding-top: 0; padding-bottom: 0; }
+  }
+
+  @media (max-width: 640px) {
+    .course-row {
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "name name"
+        "credits grade"
+        "remove remove";
+      row-gap: 8px;
+      padding: 16px 20px;
+    }
+    .course-row .field-name { grid-area: name; }
+    .course-row .field-credits { grid-area: credits; }
+    .course-row .field-grade { grid-area: grade; }
+    .course-row .row-remove { grid-area: remove; justify-self: end; }
+  }
+
+  .course-row input[type="text"],
+  .course-row input[type="number"],
+  .course-row select {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    padding: 9px 10px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .course-row input[type="text"]::placeholder { color: var(--ink-soft); opacity: 0.6; }
+
+  .course-row input:hover,
+  .course-row select:hover {
+    border-color: var(--hairline-strong);
+  }
+
+  .course-row input:focus,
+  .course-row select:focus {
+    background: var(--card);
+    border-color: var(--brass);
+    outline: none;
+  }
+
+  .course-row select.field-grade {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23A7ADBE' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .row-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .row-remove:hover { background: var(--rust-soft); color: var(--rust); }
+
+  .ledger-empty {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    display: none;
+  }
+
+  .ledger-empty.is-visible { display: block; }
+
+  .ledger-panel__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 24px 22px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--radius-control);
+    padding: 11px 18px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .btn:active { transform: scale(0.98); }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .btn-primary:hover { opacity: 0.9; }
+
+  .btn-ghost {
+    background: none;
+    color: var(--ink-soft);
+    border-color: var(--hairline-strong);
+  }
+
+  .btn-ghost:hover { border-color: var(--rust); color: var(--rust); }
+
+  /* ============================================================
+     SUMMARY PANEL (right)
+     ============================================================ */
+  .summary-panel {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    color: var(--ink);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    padding: 28px 26px 26px;
+    position: sticky;
+    top: 24px;
+  }
+
+  .summary-panel__eyebrow {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 4px;
+  }
+
+  .summary-panel__gpa {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 500;
+    line-height: 1;
+    margin: 0 0 4px;
+    transition: color 0.2s ease;
+  }
+
+  .summary-panel__scale-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+  }
+
+  .summary-panel__divider {
+    border: none;
+    border-top: 1px solid var(--hairline);
+    margin: 0 0 20px;
+  }
+
+  .summary-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  .summary-stat__label {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 0 0 4px;
+  }
+
+  .summary-stat__value {
+    font-family: var(--font-body);
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .summary-panel__standing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--radius-control);
+    background: var(--paper);
+    font-size: 13px;
+  }
+
+  .standing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--sage);
+    flex-shrink: 0;
+  }
+
+  .summary-panel__note {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin: 18px 0 0;
+    line-height: 1.5;
+    opacity: 0.8;
+  }
+
+  .icon { width: 16px; height: 16px; display: block; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="app-header__title-group">
+      <span class="app-header__mark">Ledger</span>
+      <h1 class="app-header__title">Grade Calculator</h1>
+      <p class="app-header__subtitle">Add your courses, pick a grading scale, and watch your cumulative GPA update as you go.</p>
+    </div>
+
+    <div class="header-controls">
+      <div class="scale-selector">
+        <label for="grading-scale">Grading scale</label>
+        <select id="grading-scale" name="grading-scale">
+          <option value="4.0" selected>4.0 Scale</option>
+          <option value="5.0">5.0 Scale</option>
+          <option value="custom">Custom Scale</option>
+        </select>
+      </div>
+
+      <div>
+        <span class="theme-toggle-label">Theme</span>
+        <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Toggle dark and light mode">
+          <!-- Sun icon (shown in dark mode) -->
+          <svg id="theme-icon-sun" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2m-4.22-7.78l1.42-1.42M4.22 19.78l1.42-1.42"/></svg>
+          <!-- Moon icon (shown in light mode) -->
+          <svg id="theme-icon-moon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <section class="custom-scale-panel" id="custom-scale-panel">
+    <h2 class="custom-scale-panel__heading">Define your custom scale</h2>
+    <p class="custom-scale-panel__hint">Set the letter grade and the point value it's worth, then add more rows as needed.</p>
+    <div class="custom-scale-grid" id="custom-scale-grid">
+      <div class="custom-scale-pair">
+        <input type="text" class="custom-grade-letter" value="A" maxlength="2" aria-label="Grade letter">
+        <span>=</span>
+        <input type="number" class="custom-grade-points" value="4.0" step="0.1" aria-label="Grade points">
+      </div>
+      <div class="custom-scale-pair">
+        <input type="text" class="custom-grade-letter" value="B" maxlength="2" aria-label="Grade letter">
+        <span>=</span>
+        <input type="number" class="custom-grade-points" value="3.0" step="0.1" aria-label="Grade points">
+      </div>
+      <div class="custom-scale-pair">
+        <input type="text" class="custom-grade-letter" value="C" maxlength="2" aria-label="Grade letter">
+        <span>=</span>
+        <input type="number" class="custom-grade-points" value="2.0" step="0.1" aria-label="Grade points">
+      </div>
+      <button type="button" class="btn-add-grade" id="btn-add-grade-pair">+ Add grade</button>
+    </div>
+  </section>
+
+  <div class="dashboard-grid">
+
+    <section class="ledger-panel">
+      <div class="ledger-panel__header">
+        <h2 class="ledger-panel__title">Courses</h2>
+        <span class="ledger-panel__count" id="course-count">0 courses</span>
+      </div>
+
+      <div class="ledger-columns">
+        <span>Course name / code</span>
+        <span>Credits</span>
+        <span>Grade</span>
+        <span></span>
+      </div>
+
+      <div id="course-list">
+        <div class="course-row" data-row-id="row-0">
+          <input type="text" class="field-name" placeholder="e.g. CSE220 — Data Structures" aria-label="Course name or code">
+          <input type="number" class="field-credits" placeholder="3" min="0" step="0.5" aria-label="Credit hours">
+          <select class="field-grade" aria-label="Grade received">
+            <option value="" disabled selected>Select</option>
+            <option value="A">A</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B">B</option>
+            <option value="B-">B-</option>
+            <option value="C+">C+</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="F">F</option>
+          </select>
+          <button type="button" class="row-remove" aria-label="Remove course" data-action="remove-row">
+            <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="ledger-empty" id="ledger-empty">
+        No courses yet. Add your first course to start building your GPA.
+      </div>
+
+      <div class="ledger-panel__footer">
+        <button type="button" class="btn btn-primary" id="btn-add-course">+ Add Course</button>
+        <button type="button" class="btn btn-ghost" id="btn-clear-all">Clear All</button>
+      </div>
+    </section>
+
+    <aside class="summary-panel" aria-live="polite">
+      <p class="summary-panel__eyebrow">Cumulative GPA</p>
+      <p class="summary-panel__gpa" id="summary-gpa">0.00</p>
+      <p class="summary-panel__scale-label" id="summary-scale-label">on the 4.0 scale</p>
+
+      <hr class="summary-panel__divider">
+
+      <div class="summary-stats">
+        <div>
+          <p class="summary-stat__label">Credits attempted</p>
+          <p class="summary-stat__value" id="summary-credits-attempted">0</p>
+        </div>
+        <div>
+          <p class="summary-stat__label">Credits earned</p>
+          <p class="summary-stat__value" id="summary-credits-earned">0</p>
+        </div>
+      </div>
+
+      <div class="summary-panel__standing">
+        <span class="standing-dot" id="standing-dot"></span>
+        <span id="standing-label">Add courses to see your standing</span>
+      </div>
+
+      <p class="summary-panel__note">GPA recalculates automatically as you add, edit, or remove courses.</p>
+    </aside>
+
+  </div>
+</div>
+
+<script>
+const GRADING_SCALES = {
+  "4.0": {
+    "A": 4.0, "A-": 3.7,
+    "B+": 3.3, "B": 3.0, "B-": 2.7,
+    "C+": 2.3, "C": 2.0, "C-": 1.7,
+    "D+": 1.3, "D": 1.0,
+    "F": 0.0
+  },
+  "5.0": {
+    "A": 5.0, "A-": 4.7,
+    "B+": 4.3, "B": 4.0, "B-": 3.7,
+    "C+": 3.3, "C": 3.0, "C-": 2.7,
+    "D+": 2.3, "D": 2.0,
+    "F": 0.0
+  },
+  "custom": {}
+};
+
+let courses = [];
+let rowCounter = 1;
+
+const scaleSelect        = document.getElementById('grading-scale');
+const customScalePanel   = document.getElementById('custom-scale-panel');
+const customScaleGrid    = document.getElementById('custom-scale-grid');
+const btnAddGradePair    = document.getElementById('btn-add-grade-pair');
+const themeToggleBtn     = document.getElementById('theme-toggle');
+const themeIconSun       = document.getElementById('theme-icon-sun');
+const themeIconMoon      = document.getElementById('theme-icon-moon');
+
+const courseList         = document.getElementById('course-list');
+const courseCountLabel   = document.getElementById('course-count');
+const ledgerEmptyState   = document.getElementById('ledger-empty');
+const btnAddCourse       = document.getElementById('btn-add-course');
+const btnClearAll        = document.getElementById('btn-clear-all');
+
+const summaryGpaEl       = document.getElementById('summary-gpa');
+const summaryScaleLabel  = document.getElementById('summary-scale-label');
+const summaryAttemptedEl = document.getElementById('summary-credits-attempted');
+const summaryEarnedEl    = document.getElementById('summary-credits-earned');
+const standingDot        = document.getElementById('standing-dot');
+const standingLabel      = document.getElementById('standing-label');
+
+/* ============================================================
+   THEME TOGGLE LOGIC
+   ============================================================ */
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('ledger_theme', theme);
+  if (theme === 'dark') {
+    themeIconSun.style.display = 'block';
+    themeIconMoon.style.display = 'none';
+  } else {
+    themeIconSun.style.display = 'none';
+    themeIconMoon.style.display = 'block';
+  }
+}
+
+themeToggleBtn.addEventListener('click', () => {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  setTheme(currentTheme === 'light' ? 'dark' : 'light');
+});
+
+function buildGradeOptionsHTML(scaleKey) {
+  const scale = GRADING_SCALES[scaleKey] || {};
+  const letters = Object.keys(scale);
+  let html = `<option value="" disabled selected>Select</option>`;
+  letters.forEach(letter => {
+    html += `<option value="${letter}">${letter}</option>`;
+  });
+  return html;
+}
+
+function createCourseRow() {
+  const rowId = `row-${rowCounter++}`;
+  const activeScale = scaleSelect.value;
+
+  const row = document.createElement('div');
+  row.className = 'course-row';
+  row.dataset.rowId = rowId;
+  row.innerHTML = `
+    <input type="text" class="field-name" placeholder="e.g. CSE220 — Data Structures" aria-label="Course name or code">
+    <input type="number" class="field-credits" placeholder="3" min="0" step="0.5" aria-label="Credit hours">
+    <select class="field-grade" aria-label="Grade received">
+      ${buildGradeOptionsHTML(activeScale)}
+    </select>
+    <button type="button" class="row-remove" aria-label="Remove course" data-action="remove-row">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  `;
+  courseList.appendChild(row);
+  attachRowListeners(row);
+  syncCoursesFromDOM();
+  return row;
+}
+
+function removeCourseRow(row) {
+  row.classList.add('is-removing');
+  row.addEventListener('animationend', () => {
+    row.remove();
+    syncCoursesFromDOM();
+  }, { once: true });
+}
+
+function attachRowListeners(row) {
+  const removeBtn = row.querySelector('[data-action="remove-row"]');
+  removeBtn.addEventListener('click', () => removeCourseRow(row));
+
+  row.querySelectorAll('input, select').forEach(field => {
+    field.addEventListener('input', syncCoursesFromDOM);
+    field.addEventListener('change', syncCoursesFromDOM);
+  });
+}
+
+function syncCoursesFromDOM() {
+  const rows = Array.from(courseList.querySelectorAll('.course-row'));
+
+  courses = rows.map(row => ({
+    id: row.dataset.rowId,
+    name: row.querySelector('.field-name').value.trim(),
+    credits: parseFloat(row.querySelector('.field-credits').value) || 0,
+    grade: row.querySelector('.field-grade').value
+  }));
+
+  courseCountLabel.textContent = `${courses.length} course${courses.length === 1 ? '' : 's'}`;
+  ledgerEmptyState.classList.toggle('is-visible', courses.length === 0);
+  courseList.style.display = courses.length === 0 ? 'none' : '';
+
+  recalculate();
+}
+
+function rebuildCustomScaleFromInputs() {
+  const pairs = customScaleGrid.querySelectorAll('.custom-scale-pair');
+  const scale = {};
+  pairs.forEach(pair => {
+    const letter = pair.querySelector('.custom-grade-letter').value.trim();
+    const points = parseFloat(pair.querySelector('.custom-grade-points').value);
+    if (letter && !Number.isNaN(points)) {
+      scale[letter] = points;
+    }
+  });
+  GRADING_SCALES.custom = scale;
+}
+
+function addCustomGradePairRow() {
+  const pair = document.createElement('div');
+  pair.className = 'custom-scale-pair';
+  pair.innerHTML = `
+    <input type="text" class="custom-grade-letter" value="" maxlength="2" placeholder="A" aria-label="Grade letter">
+    <span>=</span>
+    <input type="number" class="custom-grade-points" value="" step="0.1" placeholder="4.0" aria-label="Grade points">
+  `;
+  customScaleGrid.insertBefore(pair, btnAddGradePair);
+  pair.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', onCustomScaleChanged);
+  });
+}
+
+function onCustomScaleChanged() {
+  rebuildCustomScaleFromInputs();
+  if (scaleSelect.value === 'custom') {
+    refreshAllGradeDropdowns();
+    recalculationEngine();
+  }
+}
+
+function refreshAllGradeDropdowns() {
+  const activeScale = scaleSelect.value;
+  courseList.querySelectorAll('.course-row').forEach(row => {
+    const select = row.querySelector('.field-grade');
+    const previousValue = select.value;
+    select.innerHTML = buildGradeOptionsHTML(activeScale);
+    if (GRADING_SCALES[activeScale] && GRADING_SCALES[activeScale][previousValue] !== undefined) {
+      select.value = previousValue;
+    }
+  });
+  syncCoursesFromDOM();
+}
+
+function onScaleChanged() {
+  const isCustom = scaleSelect.value === 'custom';
+  customScalePanel.classList.toggle('is-visible', isCustom);
+
+  if (isCustom) {
+    rebuildCustomScaleFromInputs();
+  }
+
+  summaryScaleLabel.textContent = isCustom
+    ? 'on your custom scale'
+    : `on the ${scaleSelect.value} scale`;
+
+  refreshAllGradeDropdowns();
+}
+
+/* ============================================================
+   ROBUST CALCULATION ENGINE
+   ============================================================ */
+function calculateGPA(courseData, scaleMap) {
+    let totalQualityPoints = 0;
+    let creditsAttempted = 0;
+    let creditsEarned = 0;
+
+    for (let course of courseData) {
+        const gradePoint = scaleMap[course.grade];
+        const credits = parseFloat(course.credits);
+
+        if (gradePoint === undefined || isNaN(credits) || credits <= 0) {
+            continue; 
+        }
+
+        totalQualityPoints += gradePoint * credits;
+        creditsAttempted += credits;
+
+        if (gradePoint > 0.0) {
+            creditsEarned += credits;
+        }
+    }
+
+    const gpa = creditsAttempted === 0 ? 0.00 : totalQualityPoints / creditsAttempted;
+
+    return {
+        gpa: gpa,
+        creditsAttempted: creditsAttempted,
+        creditsEarned: creditsEarned
+    };
+}
+
+function updateStanding(gpa, scaleKey) {
+  const scaleValues = Object.values(GRADING_SCALES[scaleKey] || { A: 4 });
+  const maxPoint = scaleValues.length > 0 ? Math.max(...scaleValues) : 4.0;
+  const ratio = maxPoint > 0 ? gpa / maxPoint : 0;
+
+  if (ratio >= 0.85) {
+    standingDot.style.background = 'var(--sage)';
+    standingLabel.textContent = 'Good standing';
+  } else if (ratio >= 0.6) {
+    standingDot.style.background = 'var(--brass)';
+    standingLabel.textContent = 'Satisfactory standing';
+  } else {
+    standingDot.style.background = 'var(--rust)';
+    standingLabel.textContent = 'Needs attention';
+  }
+}
+
+function recalculate() {
+  const scaleKey = scaleSelect.value;
+  const scaleMap = GRADING_SCALES[scaleKey] || {};
+
+  const result = calculateGPA(courses, scaleMap);
+
+  summaryGpaEl.textContent = result.gpa.toFixed(2);
+  summaryAttemptedEl.textContent = result.creditsAttempted;
+  summaryEarnedEl.textContent = result.creditsEarned;
+
+  if (courses.length > 0) {
+    updateStanding(result.gpa, scaleKey);
+  } else {
+    standingDot.style.background = 'var(--hairline-strong)';
+    standingLabel.textContent = 'Add courses to see your standing';
+  }
+}
+
+btnAddCourse.addEventListener('click', createCourseRow);
+
+btnClearAll.addEventListener('click', () => {
+  Array.from(courseList.querySelectorAll('.course-row')).forEach(removeCourseRow);
+});
+
+scaleSelect.addEventListener('change', onScaleChanged);
+
+btnAddGradePair.addEventListener('click', () => {
+  addCustomGradePairRow();
+  onCustomScaleChanged();
+});
+
+(function init() {
+  // Respect saved theme preference or default to dark
+  const savedTheme = localStorage.getItem('ledger_theme') || 'dark';
+  setTheme(savedTheme);
+
+  courseList.querySelectorAll('.course-row').forEach(attachRowListeners);
+
+  customScaleGrid.querySelectorAll('.custom-grade-letter, .custom-grade-points')
+    .forEach(input => input.addEventListener('input', onCustomScaleChanged));
+
+  rebuildCustomScaleFromInputs();
+  syncCoursesFromDOM();
+})();
+</script>
+
+</body>
+</html>
